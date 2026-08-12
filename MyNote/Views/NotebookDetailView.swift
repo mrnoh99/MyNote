@@ -9,6 +9,7 @@ struct NotebookDetailView: View {
     @State private var isShowingImporter = false
     @State private var navigationPath = NavigationPath()
     @State private var importErrorMessage: String?
+    @State private var isShowingFormatGuidance = false
 
     private var sortedNotes: [Note] {
         notebook.notes.sorted { $0.updatedAt > $1.updatedAt }
@@ -43,7 +44,12 @@ struct NotebookDetailView: View {
                         Button {
                             isShowingImporter = true
                         } label: {
-                            Label("PDF/OneNote 내보내기 가져오기", systemImage: "square.and.arrow.down")
+                            Label("PDF 가져오기", systemImage: "square.and.arrow.down")
+                        }
+                        Button {
+                            isShowingFormatGuidance = true
+                        } label: {
+                            Label("가져올 수 있는 파일 형식 안내", systemImage: "questionmark.circle")
                         }
                     } label: {
                         Label("추가", systemImage: "plus")
@@ -68,12 +74,17 @@ struct NotebookDetailView: View {
             } message: {
                 Text(importErrorMessage ?? "")
             }
+            .alert("가져올 수 있는 파일 형식", isPresented: $isShowingFormatGuidance) {
+                Button("확인") { isShowingFormatGuidance = false }
+            } message: {
+                Text("PDF 파일만 가져올 수 있어요.\n\(FileImportService.unsupportedFormatGuidance)")
+            }
             .overlay {
                 if notebook.notes.isEmpty {
                     ContentUnavailableView(
                         "노트가 없습니다",
                         systemImage: "note.text",
-                        description: Text("+ 버튼으로 필기 노트를 만들거나 OneNote에서 내보낸 PDF를 가져오세요")
+                        description: Text("+ 버튼으로 필기 노트를 만들거나 PDF를 가져오세요. Word/PPT/한글/Keynote/Pages/OneNote는 각 앱에서 PDF로 내보낸 뒤 가져올 수 있어요.")
                     )
                 }
             }
