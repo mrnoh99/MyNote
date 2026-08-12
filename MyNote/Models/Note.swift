@@ -47,6 +47,9 @@ final class Note {
     var sourceFileName: String?
     var backgroundStyle: NoteBackgroundStyle = NoteBackgroundStyle.blank
 
+    /// 여러 페이지 도입 이전(단일 페이지) 필기 노트의 레거시 필드.
+    /// 새로 만드는 필기 노트는 `pages`(NotePage)를 쓰고, 이 필드는 첫
+    /// 실행 시 `NotePage(pageIndex: 0)`로 자동 이전된다.
     @Attribute(.externalStorage)
     var drawingData: Data?
 
@@ -55,6 +58,9 @@ final class Note {
 
     // CloudKit 동기화는 to-many 관계도 반드시 옵셔널 타입이어야 한다.
     // 읽을 때는 `note.pdfAnnotations ?? []`처럼 쓴다.
+    @Relationship(deleteRule: .cascade, inverse: \NotePage.note)
+    var pages: [NotePage]? = []
+
     @Relationship(deleteRule: .cascade, inverse: \PDFPageAnnotation.note)
     var pdfAnnotations: [PDFPageAnnotation]? = []
 

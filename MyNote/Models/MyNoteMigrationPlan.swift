@@ -31,6 +31,7 @@ enum MyNoteSchemaV1: VersionedSchema {
         [
             Folder.self, Notebook.self, Note.self, PDFPageAnnotation.self,
             ImageAttachment.self, TextBoxAttachment.self, AudioRecording.self,
+            NotePage.self,
         ]
     }
 }

@@ -1,13 +1,14 @@
 import UIKit
 
-/// PDF 페이지 컨테이너(줌 대상 뷰) 안에 직접 얹는 이미지 첨부. SwiftUI가
-/// 아니라 순수 UIKit으로 구현한 이유는, 이 뷰가 바깥쪽 UIScrollView가
-/// 확대/축소하는 컨테이너의 자식으로 들어가야 페이지와 같이 확대되기
-/// 때문이다(SwiftUI를 UIHostingController로 끼워 넣는 것보다 제스처
-/// 충돌을 다루기가 훨씬 단순하다). "편집 모드"일 때만 드래그/리사이즈/
-/// 삭제 제스처가 활성화되고, 편집 모드가 아닐 때는 그냥 정적인 이미지로
-/// 보인다 — 그래야 평소에는 손가락이 페이지 확대/축소·이동에만 쓰인다.
-final class PDFImageAttachmentUIView: UIView {
+/// 확대/축소되는 페이지 컨테이너(PDF 페이지 또는 필기 노트 페이지) 안에
+/// 직접 얹는 이미지 첨부. SwiftUI가 아니라 순수 UIKit으로 구현한 이유는,
+/// 이 뷰가 바깥쪽 UIScrollView가 확대/축소하는 컨테이너의 자식으로
+/// 들어가야 페이지와 같이 확대되기 때문이다(SwiftUI를 UIHostingController로
+/// 끼워 넣는 것보다 제스처 충돌을 다루기가 훨씬 단순하다). "편집 모드"일
+/// 때만 드래그/리사이즈/삭제 제스처가 활성화되고, 편집 모드가 아닐 때는
+/// 그냥 정적인 이미지로 보인다 — 그래야 평소에는 손가락이 페이지
+/// 확대/축소·이동에만 쓰인다.
+final class PageImageAttachmentUIView: UIView {
     let attachment: ImageAttachment
     private let onDelete: () -> Void
     private let onPositionChanged: () -> Void
@@ -135,10 +136,10 @@ final class PDFImageAttachmentUIView: UIView {
     }
 }
 
-/// PDF 페이지 컨테이너 안에 직접 얹는 텍스트 상자. 이미지와 달리 본문이
-/// `UITextView`라서 몸통 전체에 드래그 제스처를 달면 텍스트 커서 이동과
-/// 충돌하므로, 위쪽 작은 막대(드래그 손잡이)로만 이동시킨다.
-final class PDFTextBoxAttachmentUIView: UIView {
+/// 확대/축소되는 페이지 컨테이너 안에 직접 얹는 텍스트 상자. 이미지와
+/// 달리 본문이 `UITextView`라서 몸통 전체에 드래그 제스처를 달면 텍스트
+/// 커서 이동과 충돌하므로, 위쪽 작은 막대(드래그 손잡이)로만 이동시킨다.
+final class PageTextBoxAttachmentUIView: UIView {
     let attachment: TextBoxAttachment
     private let onDelete: () -> Void
     private let onPositionChanged: () -> Void
@@ -283,7 +284,7 @@ final class PDFTextBoxAttachmentUIView: UIView {
     }
 }
 
-extension PDFTextBoxAttachmentUIView: UITextViewDelegate {
+extension PageTextBoxAttachmentUIView: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
         attachment.text = textView.text
         onTextChanged()

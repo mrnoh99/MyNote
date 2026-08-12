@@ -4,8 +4,10 @@ import SwiftData
 /// 노트 캔버스 위에 자유롭게 배치하는 입력 텍스트 상자
 /// (손글씨가 아니라 키보드로 입력하는 일반 텍스트).
 ///
-/// `pageIndex`가 nil이면 필기 노트에 속한 첨부(페이지 개념이 없음),
-/// 값이 있으면 PDF 노트의 해당 페이지에만 나타나는 첨부다.
+/// `pageIndex`는 이 첨부가 속한 페이지 번호다(PDF 노트의 페이지, 또는
+/// 필기 노트의 `NotePage.pageIndex`). 여러 페이지 도입 이전에 만들어진
+/// 레거시 첨부는 nil일 수 있는데, 이 경우 0번 페이지에 속한 것으로
+/// 취급한다.
 @Model
 final class TextBoxAttachment {
     var id: UUID = UUID()

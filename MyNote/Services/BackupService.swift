@@ -84,6 +84,7 @@ private struct NoteBackup: Codable {
     let sourceFileName: String?
     let drawingData: Data?
     let pdfData: Data?
+    let pages: [NotePageBackup]
     let pdfAnnotations: [PDFPageAnnotationBackup]
     let imageAttachments: [ImageAttachmentBackup]
     let textBoxAttachments: [TextBoxAttachmentBackup]
@@ -99,6 +100,9 @@ private struct NoteBackup: Codable {
         sourceFileName = note.sourceFileName
         drawingData = note.drawingData
         pdfData = note.pdfData
+        pages = (note.pages ?? [])
+            .sorted { $0.pageIndex < $1.pageIndex }
+            .map(NotePageBackup.init)
         pdfAnnotations = (note.pdfAnnotations ?? [])
             .sorted { $0.pageIndex < $1.pageIndex }
             .map(PDFPageAnnotationBackup.init)
@@ -111,6 +115,18 @@ private struct NoteBackup: Codable {
         audioRecordings = (note.audioRecordings ?? [])
             .sorted { $0.createdAt < $1.createdAt }
             .map(AudioRecordingBackup.init)
+    }
+}
+
+private struct NotePageBackup: Codable {
+    let id: UUID
+    let pageIndex: Int
+    let drawingData: Data?
+
+    init(page: NotePage) {
+        id = page.id
+        pageIndex = page.pageIndex
+        drawingData = page.drawingData
     }
 }
 
@@ -191,7 +207,7 @@ private struct AudioRecordingBackup: Codable {
 }
 
 enum BackupService {
-    private static let formatVersion = 4
+    private static let formatVersion = 5
 
     private static var jsonEncoder: JSONEncoder {
         let encoder = JSONEncoder()
@@ -305,6 +321,12 @@ enum BackupService {
                 note.drawingData = noteBackup.drawingData
                 note.pdfData = noteBackup.pdfData
                 modelContext.insert(note)
+
+                for pageBackup in noteBackup.pages {
+                    let page = NotePage(pageIndex: pageBackup.pageIndex, drawingData: pageBackup.drawingData)
+                    page.note = note
+                    modelContext.insert(page)
+                }
 
                 for annotationBackup in noteBackup.pdfAnnotations {
                     let annotation = PDFPageAnnotation(

@@ -34,6 +34,12 @@ enum OrganizationService {
         copy.pdfData = note.pdfData
         modelContext.insert(copy)
 
+        for page in note.pages ?? [] {
+            let pageCopy = NotePage(pageIndex: page.pageIndex, drawingData: page.drawingData)
+            pageCopy.note = copy
+            modelContext.insert(pageCopy)
+        }
+
         for annotation in note.pdfAnnotations ?? [] {
             let annotationCopy = PDFPageAnnotation(pageIndex: annotation.pageIndex, drawingData: annotation.drawingData)
             annotationCopy.note = copy

@@ -1,12 +1,15 @@
 import SwiftUI
 import SwiftData
-import PDFKit
 import PencilKit
 
-/// PDF 페이지의 확대/축소/이동을 제어하는 리모컨. SwiftUI 쪽에서
-/// `controller.fitToScreen()`을 호출하면 현재 페이지가 화면에 맞는
-/// 배율로 즉시 되돌아온다.
-final class PDFZoomController {
+/// 필기 노트 페이지의 고정 크기. PDF와 달리 원본 문서 크기가 없으므로
+/// 임의의 "종이" 크기를 정해서 쓴다.
+enum NotePageGeometry {
+    static let size = CGSize(width: 834, height: 1194)
+}
+
+/// 필기 노트 페이지의 확대/축소/이동을 제어하는 리모컨.
+final class NotePageZoomController {
     fileprivate var resetToFitAction: (() -> Void)?
 
     func fitToScreen() {
@@ -14,35 +17,125 @@ final class PDFZoomController {
     }
 }
 
-/// PDF 페이지를 확대·축소·이동하면서 그 위에 애플펜슬 전용 필기
-/// 레이어, 그리고 이미지/텍스트 상자 첨부를 겹쳐 보여준다.
-///
-/// 입력은 세 갈래로 나뉜다:
-/// - 손가락(핀치/드래그): 페이지 확대·축소·이동 (첨부물 편집 모드가
-///   아닐 때만)
-/// - 애플펜슬: 필기
-/// - 첨부물 편집 모드가 켜져 있을 때: 손가락으로 이미지/텍스트 상자를
-///   드래그·리사이즈·삭제 — 이때는 페이지 확대/축소와 필기가 잠시
-///   꺼진다. 그래야 "화면 이동"과 "첨부물 이동" 제스처가 서로 다투지
-///   않는다.
-///
-/// 페이지 이미지·필기 레이어·첨부물을 전부 같은 컨테이너 뷰 안에 넣고
-/// 바깥쪽 UIScrollView 하나로만 확대/축소하기 때문에, 확대해도 전부
-/// 같은 자리에 맞춰 함께 움직인다.
-struct ZoomablePDFPageView: UIViewRepresentable {
-    let document: PDFDocument
-    let pageIndex: Int
-    /// 호출하는 쪽(PDFAnnotationView)이 현재 페이지에 해당하는 첨부만
-    /// 걸러서 넘긴다 — 그래야 body에서 `note.imageAttachments`를 직접
-    /// 읽어 SwiftUI Observation 의존성이 제대로 등록된다(단순히 note
-    /// 객체 참조만 넘기면 배열이 바뀌어도 다시 그려지지 않을 수 있다).
-    var imageAttachments: [ImageAttachment]
-    var textBoxAttachments: [TextBoxAttachment]
+/// 종이 배경을 직접 그리는 UIKit 뷰. SwiftUI `NotePaperBackgroundView`와
+/// 같은 무늬를 그리지만, 확대/축소되는 UIScrollView 컨테이너 안에 다른
+/// 서브뷰(캔버스, 첨부물)와 함께 얹을 수 있도록 순수 UIKit으로 만들었다.
+final class NotePaperBackgroundUIView: UIView {
+    var style: NoteBackgroundStyle = .blank {
+        didSet { setNeedsDisplay() }
+    }
+
+    private let paperColor = UIColor(red: 0.973, green: 0.965, blue: 0.933, alpha: 1)
+    private let ruleLineColor = UIColor(red: 0.72, green: 0.74, blue: 0.7, alpha: 1)
+    private let marginLineColor = UIColor(red: 0.82, green: 0.36, blue: 0.36, alpha: 1)
+    private let staffLineColor = UIColor(red: 0.35, green: 0.35, blue: 0.4, alpha: 1)
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        contentMode = .redraw
+        isOpaque = false
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func draw(_ rect: CGRect) {
+        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+        let bounds = self.bounds
+
+        paperColor.setFill()
+        ctx.fill(bounds)
+
+        switch style {
+        case .blank:
+            break
+
+        case .lined:
+            ruleLineColor.setStroke()
+            ctx.setLineWidth(1)
+            var y: CGFloat = 40
+            while y < bounds.height {
+                ctx.move(to: CGPoint(x: 0, y: y))
+                ctx.addLine(to: CGPoint(x: bounds.width, y: y))
+                y += 40
+            }
+            ctx.strokePath()
+
+            marginLineColor.setStroke()
+            ctx.setLineWidth(1.5)
+            ctx.move(to: CGPoint(x: 70, y: 0))
+            ctx.addLine(to: CGPoint(x: 70, y: bounds.height))
+            ctx.strokePath()
+
+        case .dotGrid:
+            ruleLineColor.setFill()
+            let spacing: CGFloat = 32
+            let dotRadius: CGFloat = 1.6
+            var y: CGFloat = spacing
+            while y < bounds.height {
+                var x: CGFloat = spacing
+                while x < bounds.width {
+                    let dotRect = CGRect(x: x - dotRadius, y: y - dotRadius, width: dotRadius * 2, height: dotRadius * 2)
+                    ctx.fillEllipse(in: dotRect)
+                    x += spacing
+                }
+                y += spacing
+            }
+
+        case .squareGrid:
+            ruleLineColor.setStroke()
+            ctx.setLineWidth(0.75)
+            let spacing: CGFloat = 32
+            var x: CGFloat = spacing
+            while x < bounds.width {
+                ctx.move(to: CGPoint(x: x, y: 0))
+                ctx.addLine(to: CGPoint(x: x, y: bounds.height))
+                x += spacing
+            }
+            var y: CGFloat = spacing
+            while y < bounds.height {
+                ctx.move(to: CGPoint(x: 0, y: y))
+                ctx.addLine(to: CGPoint(x: bounds.width, y: y))
+                y += spacing
+            }
+            ctx.strokePath()
+
+        case .staffPaper:
+            staffLineColor.setStroke()
+            ctx.setLineWidth(1)
+            let lineSpacing: CGFloat = 10
+            let groupSpacing: CGFloat = 70
+            let sideMargin: CGFloat = 30
+            var top: CGFloat = 50
+            while top < bounds.height {
+                for lineIndex in 0..<5 {
+                    let y = top + CGFloat(lineIndex) * lineSpacing
+                    ctx.move(to: CGPoint(x: sideMargin, y: y))
+                    ctx.addLine(to: CGPoint(x: bounds.width - sideMargin, y: y))
+                }
+                top += groupSpacing
+            }
+            ctx.strokePath()
+        }
+    }
+}
+
+/// 필기 노트 한 페이지를 확대·축소·이동하면서 그 위에 애플펜슬 전용
+/// 필기 레이어, 그리고 이미지/텍스트 상자 첨부를 겹쳐 보여준다.
+/// 구조와 입력 규칙은 `ZoomablePDFPageView`와 동일하다 — 손가락은 페이지
+/// 확대·축소·이동(첨부물 편집 모드가 아닐 때), 애플펜슬은 필기,
+/// 첨부물 편집 모드에서는 손가락으로 첨부물을 드래그·리사이즈·삭제한다.
+struct ZoomableNotePageView: UIViewRepresentable {
+    let backgroundStyle: NoteBackgroundStyle
     @Binding var canvasView: PKCanvasView
     var drawingData: Data?
-    var controller: PDFZoomController
+    var controller: NotePageZoomController
     var toolState: PencilToolState
     var viewportSize: CGSize
+    var imageAttachments: [ImageAttachment]
+    var textBoxAttachments: [TextBoxAttachment]
     var isEditingAttachments: Bool
     var modelContext: ModelContext
     var onDrawingChanged: (PKDrawing) -> Void
@@ -59,9 +152,8 @@ struct ZoomablePDFPageView: UIViewRepresentable {
         containerView.backgroundColor = .clear
         scrollView.addSubview(containerView)
 
-        let imageView = UIImageView()
-        imageView.contentMode = .scaleToFill
-        containerView.addSubview(imageView)
+        let backgroundView = NotePaperBackgroundUIView()
+        containerView.addSubview(backgroundView)
 
         canvasView.drawingPolicy = .pencilOnly
         canvasView.backgroundColor = .clear
@@ -73,7 +165,7 @@ struct ZoomablePDFPageView: UIViewRepresentable {
 
         context.coordinator.scrollView = scrollView
         context.coordinator.containerView = containerView
-        context.coordinator.imageView = imageView
+        context.coordinator.backgroundView = backgroundView
         context.coordinator.canvasView = canvasView
         context.coordinator.modelContext = modelContext
 
@@ -81,7 +173,7 @@ struct ZoomablePDFPageView: UIViewRepresentable {
             coordinator?.fitToScreen(animated: true)
         }
 
-        context.coordinator.reloadPage(document: document, pageIndex: pageIndex, viewportSize: viewportSize)
+        context.coordinator.setupPage(backgroundStyle: backgroundStyle, viewportSize: viewportSize)
         context.coordinator.reloadDrawing(drawingData)
         context.coordinator.syncAttachments(images: imageAttachments, textBoxes: textBoxAttachments, isEditing: isEditingAttachments)
         context.coordinator.applyEditingMode(isEditingAttachments)
@@ -94,13 +186,17 @@ struct ZoomablePDFPageView: UIViewRepresentable {
         context.coordinator.modelContext = modelContext
         canvasView.tool = toolState.pkTool
 
-        let pageChanged = context.coordinator.loadedPageIndex != pageIndex
         let viewportChanged = context.coordinator.lastViewportSize != viewportSize
-
-        if pageChanged || viewportChanged {
-            context.coordinator.reloadPage(document: document, pageIndex: pageIndex, viewportSize: viewportSize)
+        if viewportChanged {
+            context.coordinator.setupPage(backgroundStyle: backgroundStyle, viewportSize: viewportSize)
         }
-        if pageChanged {
+        if context.coordinator.backgroundView?.style != backgroundStyle {
+            context.coordinator.backgroundView?.style = backgroundStyle
+        }
+
+        // drawingData가 바뀌었다는 건 페이지를 전환했다는 뜻이다(같은
+        // 페이지 안에서는 캔버스가 직접 그리므로 이 값이 바뀌지 않는다).
+        if context.coordinator.currentDrawingData != drawingData {
             context.coordinator.reloadDrawing(drawingData)
         }
 
@@ -115,12 +211,12 @@ struct ZoomablePDFPageView: UIViewRepresentable {
     final class Coordinator: NSObject, UIScrollViewDelegate, PKCanvasViewDelegate {
         weak var scrollView: UIScrollView?
         weak var containerView: UIView?
-        weak var imageView: UIImageView?
+        weak var backgroundView: NotePaperBackgroundUIView?
         weak var canvasView: PKCanvasView?
         var modelContext: ModelContext?
 
-        var loadedPageIndex: Int = -1
         var lastViewportSize: CGSize = .zero
+        var currentDrawingData: Data?
         var onDrawingChanged: (PKDrawing) -> Void
 
         private var imageAttachmentViews: [UUID: PageImageAttachmentUIView] = [:]
@@ -139,36 +235,22 @@ struct ZoomablePDFPageView: UIViewRepresentable {
         }
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            currentDrawingData = canvasView.drawing.dataRepresentation()
             onDrawingChanged(canvasView.drawing)
         }
 
-        func reloadPage(document: PDFDocument, pageIndex: Int, viewportSize: CGSize) {
-            guard viewportSize.width > 0, viewportSize.height > 0,
-                  let page = document.page(at: pageIndex) else { return }
-
-            let pageBounds = page.bounds(for: .mediaBox)
-            loadedPageIndex = pageIndex
+        func setupPage(backgroundStyle: NoteBackgroundStyle, viewportSize: CGSize) {
+            guard viewportSize.width > 0, viewportSize.height > 0 else { return }
             lastViewportSize = viewportSize
 
-            let renderer = UIGraphicsImageRenderer(size: pageBounds.size)
-            let image = renderer.image { rendererContext in
-                UIColor.white.setFill()
-                rendererContext.fill(CGRect(origin: .zero, size: pageBounds.size))
-                let cgContext = rendererContext.cgContext
-                cgContext.saveGState()
-                cgContext.translateBy(x: 0, y: pageBounds.height)
-                cgContext.scaleBy(x: 1, y: -1)
-                page.draw(with: .mediaBox, to: cgContext)
-                cgContext.restoreGState()
-            }
+            let pageSize = NotePageGeometry.size
+            containerView?.frame = CGRect(origin: .zero, size: pageSize)
+            backgroundView?.frame = CGRect(origin: .zero, size: pageSize)
+            backgroundView?.style = backgroundStyle
+            canvasView?.frame = CGRect(origin: .zero, size: pageSize)
+            scrollView?.contentSize = pageSize
 
-            containerView?.frame = CGRect(origin: .zero, size: pageBounds.size)
-            imageView?.frame = CGRect(origin: .zero, size: pageBounds.size)
-            imageView?.image = image
-            canvasView?.frame = CGRect(origin: .zero, size: pageBounds.size)
-            scrollView?.contentSize = pageBounds.size
-
-            let fitScale = min(viewportSize.width / pageBounds.width, viewportSize.height / pageBounds.height)
+            let fitScale = min(viewportSize.width / pageSize.width, viewportSize.height / pageSize.height)
             guard fitScale > 0 else { return }
             scrollView?.minimumZoomScale = fitScale
             scrollView?.maximumZoomScale = fitScale * 5
@@ -178,14 +260,14 @@ struct ZoomablePDFPageView: UIViewRepresentable {
 
         func reloadDrawing(_ data: Data?) {
             guard let canvasView else { return }
+            currentDrawingData = data
             if let data, let drawing = try? PKDrawing(data: data) {
                 canvasView.drawing = drawing
             } else {
                 canvasView.drawing = PKDrawing()
             }
             // 페이지를 바꿀 때 이전 페이지의 실행 취소 기록이 남아있으면
-            // "다른 페이지를 보면서 이전 페이지 획을 되돌리는" 혼란스러운
-            // 상황이 생긴다. 페이지마다 실행 취소 기록을 새로 시작한다.
+            // 혼란스러우므로, 페이지마다 실행 취소 기록을 새로 시작한다.
             canvasView.undoManager?.removeAllActions()
         }
 
@@ -204,21 +286,14 @@ struct ZoomablePDFPageView: UIViewRepresentable {
             containerView.frame = frame
         }
 
-        /// 편집 모드일 때는 페이지 확대/축소·이동과 필기를 잠시 끄고
-        /// 첨부물 제스처만 받는다. 편집 모드가 아니면 반대.
         func applyEditingMode(_ isEditing: Bool) {
             scrollView?.pinchGestureRecognizer?.isEnabled = !isEditing
             scrollView?.panGestureRecognizer.isEnabled = !isEditing
             canvasView?.isUserInteractionEnabled = !isEditing
         }
 
-        /// 현재 페이지에 속한 첨부물(호출하는 쪽에서 이미 페이지로 걸러서
-        /// 넘김)과 화면에 이미 떠 있는 뷰를 비교해서 새로 생긴 것만
-        /// 추가하고 사라진 것만 제거한다. 기존 뷰는 건드리지 않아서
-        /// 사용자가 텍스트를 입력하는 도중에도 끊기지 않는다.
         func syncAttachments(images currentImages: [ImageAttachment], textBoxes currentTextBoxes: [TextBoxAttachment], isEditing: Bool) {
             guard let containerView else { return }
-
             let currentImageIDs = Set(currentImages.map(\.id))
             let currentTextBoxIDs = Set(currentTextBoxes.map(\.id))
 
