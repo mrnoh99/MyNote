@@ -5,7 +5,7 @@ OneNote와 비슷한 방식으로 쓰는 iOS 노트 앱입니다. SwiftUI + Swif
 ## 주요 기능
 
 1. **자체 노트 작성** — 노트북 안에 새 "필기 노트"를 만들고 PencilKit 캔버스에 손가락/애플펜슬로 자유롭게 필기합니다. 캔버스 배경은 OneNote 스타일의 백지 / 줄친 종이 / 점선지 / 모눈종이, 그리고 손글씨 악보용 오선지 중에서 고를 수 있고 노트별로 저장됩니다. (`NoteEditorView`, `CanvasRepresentable`, `NotePaperBackgroundView`)
-2. **PDF 불러오기 + 애플펜슬 메모** — `fileImporter`로 PDF를 불러오면 페이지 단위로 넘겨보면서 애플펜슬로 필기를 겹쳐 쓸 수 있습니다. 필기는 페이지별로 원본 PDF와 분리되어 저장되므로 원본이 손상되지 않습니다. "내보내기" 버튼으로 필기가 합쳐진 PDF를 공유 시트로 내보낼 수 있습니다. (`PDFAnnotationView`, `PDFCanvasOverlay`, `PDFPageRepresentable`, `PDFAnnotationFlattener`)
+2. **PDF 불러오기 + 애플펜슬 메모** — `fileImporter`로 PDF를 불러오면 페이지 단위로 넘겨보면서 애플펜슬로 필기를 겹쳐 쓸 수 있습니다. 필기는 페이지별로 원본 PDF와 분리되어 저장되므로 원본이 손상되지 않습니다. 손가락으로 핀치하여 확대/축소·이동할 수 있고(애플펜슬은 필기 전용), 툴바의 "화면에 맞추기" 버튼으로 언제든 페이지 전체가 보이는 배율로 즉시 되돌아옵니다 — 페이지 이미지와 필기 레이어가 같은 컨테이너에서 함께 확대되므로 확대해도 어긋나지 않습니다. "내보내기" 버튼으로 필기가 합쳐진 PDF를 공유 시트로 내보낼 수 있습니다. (`PDFAnnotationView`, `ZoomablePDFPageView`, `PDFAnnotationFlattener`)
 3. **OneNote 내보내기 파일 가져오기 → iCloud 저장/동기화** — OneNote에서 "PDF로 내보내기"한 파일을 같은 파일 가져오기 기능으로 MyNote에 새 노트로 추가합니다. 노트 데이터(SwiftData 모델)는 `ModelConfiguration(cloudKitDatabase: .automatic)`로 구성되어 있어 별도 서버 코드 없이 iCloud(CloudKit 프라이빗 데이터베이스)에 저장되고, 같은 iCloud 계정의 다른 기기와 자동으로 동기화됩니다. PDF가 아닌 Word/PPT/한글/Keynote/Pages 파일은 각 앱에서 PDF로 내보낸 뒤 가져오도록 안내합니다. (`FileImportService`)
 4. **백업 / 복원** — 사이드바 오른쪽 위 `+` 메뉴에서 "백업 내보내기"를 누르면 폴더 구조를 포함한 라이브러리 전체(폴더·노트북·노트·필기·PDF·페이지별 주석)를 하나의 JSON 파일(`MyNote-Backup-*.json`)로 만들어 공유 시트로 내보냅니다(파일 앱, iCloud Drive, AirDrop 등에 저장 가능). "백업에서 복원"으로 그 파일을 다시 선택하면 새 폴더/노트북들로 추가 복원됩니다 — 기존 데이터는 지우지 않는 안전한(추가형) 복원입니다. CloudKit 자동 동기화와는 별개로, 기기 이전이나 수동 스냅샷 용도로 씁니다. (`BackupService`)
 5. **폴더 정리 / 이동 / 복제** — 노트북을 폴더로 묶어 정리할 수 있고(폴더 안에 폴더도 중첩 가능), 폴더·노트북·노트를 다른 폴더/노트북으로 옮기거나 복제할 수 있습니다. 사이드바에서 폴더를 길게 눌러(컨텍스트 메뉴) 이름 변경/이동/삭제, 노트북은 이름 변경/이동/복제/삭제를 할 수 있고, 노트북 안에서는 노트별로 다른 노트북으로 이동·복제할 수 있습니다. (`Models/Folder.swift`, `FolderBrowserView`, `FolderPickerView`, `NotebookPickerView`, `OrganizationService`)
@@ -35,8 +35,7 @@ MyNote/
     PDFAnnotationView.swift  PDF 뷰어 + 애플펜슬 필기 화면
     Components/
       CanvasRepresentable.swift   PencilKit 캔버스(UIViewRepresentable)
-      PDFPageRepresentable.swift  단일 페이지 PDF 뷰
-      PDFCanvasOverlay.swift      PDF 위 애플펜슬 전용 필기 레이어
+      ZoomablePDFPageView.swift   확대/축소·이동 가능한 PDF 페이지 + 애플펜슬 필기 레이어
       ActivityView.swift          공유 시트 래퍼
       NotePaperBackgroundView.swift  필기 노트 배경(빈 배경/줄노트/오선지) 렌더러
   Services/

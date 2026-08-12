@@ -10,6 +10,7 @@ struct PDFAnnotationView: View {
     @State private var currentPageIndex = 0
     @State private var pageCount = 0
     @State private var canvasView = PKCanvasView()
+    @State private var zoomController = PDFZoomController()
     @State private var isShowingShareSheet = false
     @State private var shareURL: URL?
     @State private var loadErrorMessage: String?
@@ -18,12 +19,14 @@ struct PDFAnnotationView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let pdfDocument {
-                ZStack {
-                    PDFPageRepresentable(document: pdfDocument, pageIndex: currentPageIndex)
-                    PDFCanvasOverlay(
-                        canvasView: $canvasView,
+                GeometryReader { geometry in
+                    ZoomablePDFPageView(
+                        document: pdfDocument,
                         pageIndex: currentPageIndex,
-                        drawingData: annotationData(for: currentPageIndex)
+                        canvasView: $canvasView,
+                        drawingData: annotationData(for: currentPageIndex),
+                        controller: zoomController,
+                        viewportSize: geometry.size
                     ) { drawing in
                         saveAnnotation(drawing, forPage: currentPageIndex)
                     }
@@ -41,6 +44,14 @@ struct PDFAnnotationView: View {
             ToolbarItem(placement: .principal) {
                 TextField("제목", text: $note.title)
                     .multilineTextAlignment(.center)
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    zoomController.fitToScreen()
+                } label: {
+                    Label("화면에 맞추기", systemImage: "arrow.up.left.and.arrow.down.right")
+                }
+                .disabled(pdfDocument == nil)
             }
             ToolbarItem(placement: .secondaryAction) {
                 Button {
