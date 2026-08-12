@@ -76,8 +76,11 @@ struct PDFAnnotationView: View {
                 ProgressView("PDF 불러오는 중...")
             }
         }
+        .background(Color(uiColor: .systemBackground))
         .navigationTitle(note.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color(uiColor: .systemBackground), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 TextField("제목", text: $note.title)
