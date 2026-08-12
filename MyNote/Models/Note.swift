@@ -7,23 +7,31 @@ enum NoteKind: String, Codable {
 }
 
 /// 필기 노트(PDF 노트에는 적용되지 않음)의 캔버스 배경 종이 스타일.
+/// OneNote의 기본 페이지 스타일(백지/줄친 종이/모눈종이/점선지)에 대응하고,
+/// 손글씨 악보 작성을 위한 오선지를 더했다.
 enum NoteBackgroundStyle: String, Codable, CaseIterable, Hashable {
     case blank
     case lined
+    case dotGrid
+    case squareGrid
     case staffPaper
 
     var displayName: String {
         switch self {
-        case .blank: return "빈 배경"
-        case .lined: return "줄노트"
+        case .blank: return "백지"
+        case .lined: return "줄친 종이"
+        case .dotGrid: return "점선지"
+        case .squareGrid: return "모눈종이"
         case .staffPaper: return "오선지"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .blank: return "square"
+        case .blank: return "doc.plaintext"
         case .lined: return "text.alignleft"
+        case .dotGrid: return "circle.grid.3x3"
+        case .squareGrid: return "grid"
         case .staffPaper: return "music.note.list"
         }
     }
