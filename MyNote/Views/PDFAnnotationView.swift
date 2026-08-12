@@ -1,0 +1,152 @@
+import SwiftUI
+import PDFKit
+import PencilKit
+
+struct PDFAnnotationView: View {
+    @Bindable var note: Note
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var pdfDocument: PDFDocument?
+    @State private var currentPageIndex = 0
+    @State private var pageCount = 0
+    @State private var canvasView = PKCanvasView()
+    @State private var isShowingShareSheet = false
+    @State private var shareURL: URL?
+    @State private var loadErrorMessage: String?
+    @State private var exportErrorMessage: String?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let pdfDocument {
+                ZStack {
+                    PDFPageRepresentable(document: pdfDocument, pageIndex: currentPageIndex)
+                    PDFCanvasOverlay(
+                        canvasView: $canvasView,
+                        pageIndex: currentPageIndex,
+                        drawingData: annotationData(for: currentPageIndex)
+                    ) { drawing in
+                        saveAnnotation(drawing, forPage: currentPageIndex)
+                    }
+                }
+                pageNavigationBar
+            } else if let loadErrorMessage {
+                ContentUnavailableView("PDF를 열 수 없습니다", systemImage: "exclamationmark.triangle", description: Text(loadErrorMessage))
+            } else {
+                ProgressView("PDF 불러오는 중...")
+            }
+        }
+        .navigationTitle(note.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                TextField("제목", text: $note.title)
+                    .multilineTextAlignment(.center)
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    exportAndShare()
+                } label: {
+                    Label("내보내기", systemImage: "square.and.arrow.up")
+                }
+                .disabled(pdfDocument == nil)
+            }
+        }
+        .sheet(isPresented: $isShowingShareSheet) {
+            if let shareURL {
+                ActivityView(activityItems: [shareURL])
+            }
+        }
+        .alert(
+            "내보내기 실패",
+            isPresented: Binding(
+                get: { exportErrorMessage != nil },
+                set: { if !$0 { exportErrorMessage = nil } }
+            )
+        ) {
+            Button("확인") { exportErrorMessage = nil }
+        } message: {
+            Text(exportErrorMessage ?? "")
+        }
+        .task {
+            loadDocument()
+        }
+    }
+
+    private var pageNavigationBar: some View {
+        HStack {
+            Button {
+                goToPage(currentPageIndex - 1)
+            } label: {
+                Image(systemName: "chevron.left")
+            }
+            .disabled(currentPageIndex == 0)
+
+            Spacer()
+
+            Text("\(currentPageIndex + 1) / \(pageCount)")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Button {
+                goToPage(currentPageIndex + 1)
+            } label: {
+                Image(systemName: "chevron.right")
+            }
+            .disabled(currentPageIndex >= pageCount - 1)
+        }
+        .padding()
+        .background(.bar)
+    }
+
+    private func loadDocument() {
+        guard let data = note.pdfData else {
+            loadErrorMessage = "이 노트에 저장된 PDF 데이터가 없습니다."
+            return
+        }
+        guard let document = PDFDocument(data: data) else {
+            loadErrorMessage = "PDF 파일 형식을 인식할 수 없습니다."
+            return
+        }
+        pdfDocument = document
+        pageCount = document.pageCount
+    }
+
+    private func annotationData(for pageIndex: Int) -> Data? {
+        note.pdfAnnotations.first { $0.pageIndex == pageIndex }?.drawingData
+    }
+
+    private func saveAnnotation(_ drawing: PKDrawing, forPage pageIndex: Int) {
+        if let existing = note.pdfAnnotations.first(where: { $0.pageIndex == pageIndex }) {
+            existing.drawingData = drawing.dataRepresentation()
+        } else {
+            let annotation = PDFPageAnnotation(pageIndex: pageIndex, drawingData: drawing.dataRepresentation())
+            annotation.note = note
+            modelContext.insert(annotation)
+            note.pdfAnnotations.append(annotation)
+        }
+        note.updatedAt = .now
+    }
+
+    private func goToPage(_ index: Int) {
+        guard index >= 0, index < pageCount else { return }
+        currentPageIndex = index
+    }
+
+    private func exportAndShare() {
+        guard let pdfData = note.pdfData,
+              let flattened = PDFAnnotationFlattener.flatten(pdfData: pdfData, annotations: note.pdfAnnotations) else {
+            return
+        }
+        let fileName = note.title.isEmpty ? "MyNote" : note.title
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(fileName).pdf")
+        do {
+            try flattened.write(to: url, options: .atomic)
+            shareURL = url
+            isShowingShareSheet = true
+        } catch {
+            exportErrorMessage = error.localizedDescription
+        }
+    }
+}
