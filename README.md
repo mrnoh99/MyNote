@@ -58,6 +58,6 @@ MyNote/
 ## 알려진 제한 사항 / 다음 단계
 
 - OneNote(.one) 파일 자체를 직접 파싱하지는 않습니다. OneNote 앱의 "PDF로 내보내기" 기능으로 만든 PDF를 가져오는 방식입니다. Word/PPT/한글/Keynote/Pages도 마찬가지로 해당 앱에서 PDF로 내보내야 합니다.
-- 앱 아이콘 이미지(PNG)는 포함되어 있지 않습니다(`Assets.xcassets/AppIcon.appiconset`에 슬롯만 정의됨). Xcode에서 아이콘 이미지를 채워 넣어야 합니다.
+- 앱 아이콘은 `Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`(1024×1024, 알파 채널 없음)로 포함되어 있습니다. 마음에 들지 않으면 같은 경로의 PNG만 교체하면 됩니다.
 - 백업 파일 포맷은 버전 2(`formatVersion = 2`, 폴더 구조 포함)이며, 폴더 기능 이전에 만든 버전 1 백업 파일은 호환되지 않습니다.
 - 이 프로젝트 파일은 macOS/Xcode가 없는 환경에서 작성되었으므로, 실제 Xcode에서 연 뒤 빌드 로그를 한 번 확인해 주세요.
