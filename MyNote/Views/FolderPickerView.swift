@@ -56,7 +56,7 @@ struct FolderPickerView: View {
         func visit(_ folder: Folder, depth: Int) {
             guard !isExcluded(folder) else { return }
             result.append((folder, depth))
-            for child in folder.subfolders.sorted(by: { $0.title < $1.title }) {
+            for child in (folder.subfolders ?? []).sorted(by: { $0.title < $1.title }) {
                 visit(child, depth: depth + 1)
             }
         }

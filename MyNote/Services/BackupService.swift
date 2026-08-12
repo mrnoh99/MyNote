@@ -68,7 +68,7 @@ private struct NotebookBackup: Codable {
         createdAt = notebook.createdAt
         updatedAt = notebook.updatedAt
         folderID = notebook.folder?.id
-        notes = notebook.notes
+        notes = (notebook.notes ?? [])
             .sorted { $0.createdAt < $1.createdAt }
             .map(NoteBackup.init)
     }
@@ -99,16 +99,16 @@ private struct NoteBackup: Codable {
         sourceFileName = note.sourceFileName
         drawingData = note.drawingData
         pdfData = note.pdfData
-        pdfAnnotations = note.pdfAnnotations
+        pdfAnnotations = (note.pdfAnnotations ?? [])
             .sorted { $0.pageIndex < $1.pageIndex }
             .map(PDFPageAnnotationBackup.init)
-        imageAttachments = note.imageAttachments
+        imageAttachments = (note.imageAttachments ?? [])
             .sorted { $0.createdAt < $1.createdAt }
             .map(ImageAttachmentBackup.init)
-        textBoxAttachments = note.textBoxAttachments
+        textBoxAttachments = (note.textBoxAttachments ?? [])
             .sorted { $0.createdAt < $1.createdAt }
             .map(TextBoxAttachmentBackup.init)
-        audioRecordings = note.audioRecordings
+        audioRecordings = (note.audioRecordings ?? [])
             .sorted { $0.createdAt < $1.createdAt }
             .map(AudioRecordingBackup.init)
     }

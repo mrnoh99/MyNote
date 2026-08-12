@@ -18,7 +18,7 @@ struct NotebookDetailView: View {
     @State private var duplicatingNote: Note?
 
     private var sortedNotes: [Note] {
-        notebook.notes.sorted { $0.updatedAt > $1.updatedAt }
+        (notebook.notes ?? []).sorted { $0.updatedAt > $1.updatedAt }
     }
 
     var body: some View {
@@ -56,7 +56,7 @@ struct NotebookDetailView: View {
             .onDelete(perform: deleteNotes)
         }
         .overlay {
-            if notebook.notes.isEmpty {
+            if (notebook.notes ?? []).isEmpty {
                 ContentUnavailableView(
                     "노트가 없습니다",
                     systemImage: "note.text",

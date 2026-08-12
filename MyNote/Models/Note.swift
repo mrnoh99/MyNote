@@ -53,17 +53,19 @@ final class Note {
     @Attribute(.externalStorage)
     var pdfData: Data?
 
+    // CloudKit 동기화는 to-many 관계도 반드시 옵셔널 타입이어야 한다.
+    // 읽을 때는 `note.pdfAnnotations ?? []`처럼 쓴다.
     @Relationship(deleteRule: .cascade, inverse: \PDFPageAnnotation.note)
-    var pdfAnnotations: [PDFPageAnnotation] = []
+    var pdfAnnotations: [PDFPageAnnotation]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \ImageAttachment.note)
-    var imageAttachments: [ImageAttachment] = []
+    var imageAttachments: [ImageAttachment]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \TextBoxAttachment.note)
-    var textBoxAttachments: [TextBoxAttachment] = []
+    var textBoxAttachments: [TextBoxAttachment]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \AudioRecording.note)
-    var audioRecordings: [AudioRecording] = []
+    var audioRecordings: [AudioRecording]? = []
 
     var notebook: Notebook?
 

@@ -296,16 +296,16 @@ struct FolderBrowserView: View {
     /// 삭제로 인해 사라질 노트가 탭으로 열려 있으면 먼저 닫는다.
     /// (삭제된 SwiftData 객체를 탭이 계속 들고 있으면 안 된다.)
     private func closeTabs(in notebook: Notebook) {
-        for note in notebook.notes {
+        for note in notebook.notes ?? [] {
             workspace.close(note)
         }
     }
 
     private func closeTabs(inFolderTree folder: Folder) {
-        for notebook in folder.notebooks {
+        for notebook in folder.notebooks ?? [] {
             closeTabs(in: notebook)
         }
-        for subfolder in folder.subfolders {
+        for subfolder in folder.subfolders ?? [] {
             closeTabs(inFolderTree: subfolder)
         }
     }

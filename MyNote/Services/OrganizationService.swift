@@ -12,7 +12,7 @@ enum OrganizationService {
         let copy = Notebook(title: notebook.title + " 복사본", colorHex: notebook.colorHex, folder: folder)
         modelContext.insert(copy)
 
-        for note in notebook.notes {
+        for note in notebook.notes ?? [] {
             duplicateNote(note, into: copy, modelContext: modelContext, renaming: false)
         }
 
@@ -34,13 +34,13 @@ enum OrganizationService {
         copy.pdfData = note.pdfData
         modelContext.insert(copy)
 
-        for annotation in note.pdfAnnotations {
+        for annotation in note.pdfAnnotations ?? [] {
             let annotationCopy = PDFPageAnnotation(pageIndex: annotation.pageIndex, drawingData: annotation.drawingData)
             annotationCopy.note = copy
             modelContext.insert(annotationCopy)
         }
 
-        for image in note.imageAttachments {
+        for image in note.imageAttachments ?? [] {
             guard let imageData = image.imageData else { continue }
             let imageCopy = ImageAttachment(
                 imageData: imageData,
@@ -54,7 +54,7 @@ enum OrganizationService {
             modelContext.insert(imageCopy)
         }
 
-        for textBox in note.textBoxAttachments {
+        for textBox in note.textBoxAttachments ?? [] {
             let textBoxCopy = TextBoxAttachment(
                 text: textBox.text,
                 positionX: textBox.positionX,
@@ -69,7 +69,7 @@ enum OrganizationService {
             modelContext.insert(textBoxCopy)
         }
 
-        for recording in note.audioRecordings {
+        for recording in note.audioRecordings ?? [] {
             let recordingCopy = AudioRecording(
                 title: recording.title,
                 duration: recording.duration,

@@ -27,11 +27,11 @@ struct PDFAnnotationView: View {
     /// 직접 참조해야 SwiftUI Observation이 `note.imageAttachments`의
     /// 변화를 추적해서 화면을 다시 그린다.
     private var currentPageImageAttachments: [ImageAttachment] {
-        note.imageAttachments.filter { $0.pageIndex == currentPageIndex }
+        (note.imageAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
     }
 
     private var currentPageTextBoxAttachments: [TextBoxAttachment] {
-        note.textBoxAttachments.filter { $0.pageIndex == currentPageIndex }
+        (note.textBoxAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
     }
 
     var body: some View {
@@ -207,11 +207,11 @@ struct PDFAnnotationView: View {
     }
 
     private func annotationData(for pageIndex: Int) -> Data? {
-        note.pdfAnnotations.first { $0.pageIndex == pageIndex }?.drawingData
+        (note.pdfAnnotations ?? []).first { $0.pageIndex == pageIndex }?.drawingData
     }
 
     private func saveAnnotation(_ drawing: PKDrawing, forPage pageIndex: Int) {
-        if let existing = note.pdfAnnotations.first(where: { $0.pageIndex == pageIndex }) {
+        if let existing = (note.pdfAnnotations ?? []).first(where: { $0.pageIndex == pageIndex }) {
             existing.drawingData = drawing.dataRepresentation()
         } else {
             let annotation = PDFPageAnnotation(pageIndex: pageIndex, drawingData: drawing.dataRepresentation())
@@ -244,7 +244,7 @@ struct PDFAnnotationView: View {
 
     private func exportAndShare() {
         guard let pdfData = note.pdfData,
-              let flattened = PDFAnnotationFlattener.flatten(pdfData: pdfData, annotations: note.pdfAnnotations) else {
+              let flattened = PDFAnnotationFlattener.flatten(pdfData: pdfData, annotations: note.pdfAnnotations ?? []) else {
             return
         }
         let fileName = note.title.isEmpty ? "MyNote" : note.title

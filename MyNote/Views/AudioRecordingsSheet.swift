@@ -12,7 +12,7 @@ struct AudioRecordingsSheet: View {
     @State private var permissionDeniedMessage: String?
 
     private var sortedRecordings: [AudioRecording] {
-        note.audioRecordings.sorted { $0.createdAt < $1.createdAt }
+        (note.audioRecordings ?? []).sorted { $0.createdAt < $1.createdAt }
     }
 
     var body: some View {

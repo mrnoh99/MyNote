@@ -12,11 +12,15 @@ final class Folder {
 
     var parentFolder: Folder?
 
+    // CloudKit 동기화는 to-many 관계도 반드시 옵셔널 타입이어야 한다
+    // (그냥 기본값이 []인 것만으로는 부족하다). 실제 값은 항상 빈
+    // 배열로 초기화되므로 사용할 때는 `folder.subfolders ?? []`처럼
+    // 읽으면 된다.
     @Relationship(deleteRule: .cascade, inverse: \Folder.parentFolder)
-    var subfolders: [Folder] = []
+    var subfolders: [Folder]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \Notebook.folder)
-    var notebooks: [Notebook] = []
+    var notebooks: [Notebook]? = []
 
     init(title: String, parentFolder: Folder? = nil) {
         self.id = UUID()

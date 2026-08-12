@@ -11,13 +11,13 @@ struct AttachmentOverlayView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            ForEach(note.imageAttachments.filter { $0.pageIndex == nil }) { attachment in
+            ForEach((note.imageAttachments ?? []).filter { $0.pageIndex == nil }) { attachment in
                 ImageAttachmentView(attachment: attachment) {
                     modelContext.delete(attachment)
                     note.updatedAt = .now
                 }
             }
-            ForEach(note.textBoxAttachments.filter { $0.pageIndex == nil }) { attachment in
+            ForEach((note.textBoxAttachments ?? []).filter { $0.pageIndex == nil }) { attachment in
                 TextBoxAttachmentView(attachment: attachment) {
                     modelContext.delete(attachment)
                     note.updatedAt = .now

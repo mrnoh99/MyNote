@@ -12,8 +12,10 @@ final class Notebook {
     /// nil이면 최상위(루트)에 있는 노트북.
     var folder: Folder?
 
+    // CloudKit 동기화는 to-many 관계도 반드시 옵셔널 타입이어야 한다.
+    // 읽을 때는 `notebook.notes ?? []`처럼 쓴다.
     @Relationship(deleteRule: .cascade, inverse: \Note.notebook)
-    var notes: [Note] = []
+    var notes: [Note]? = []
 
     init(title: String, colorHex: String = "#4A90D9", folder: Folder? = nil) {
         self.id = UUID()
