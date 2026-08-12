@@ -7,6 +7,7 @@ OneNote와 비슷한 방식으로 쓰는 iOS 노트 앱입니다. SwiftUI + Swif
 1. **자체 노트 작성** — 노트북 안에 새 "필기 노트"를 만들고 PencilKit 캔버스에 손가락/애플펜슬로 자유롭게 필기합니다. (`NoteEditorView`, `CanvasRepresentable`)
 2. **PDF 불러오기 + 애플펜슬 메모** — `fileImporter`로 PDF를 불러오면 페이지 단위로 넘겨보면서 애플펜슬로 필기를 겹쳐 쓸 수 있습니다. 필기는 페이지별로 원본 PDF와 분리되어 저장되므로 원본이 손상되지 않습니다. "내보내기" 버튼으로 필기가 합쳐진 PDF를 공유 시트로 내보낼 수 있습니다. (`PDFAnnotationView`, `PDFCanvasOverlay`, `PDFPageRepresentable`, `PDFAnnotationFlattener`)
 3. **OneNote 내보내기 파일 가져오기 → iCloud 저장/동기화** — OneNote에서 "PDF로 내보내기"한 파일을 같은 파일 가져오기 기능으로 MyNote에 새 노트로 추가합니다. 노트 데이터(SwiftData 모델)는 `ModelConfiguration(cloudKitDatabase: .automatic)`로 구성되어 있어 별도 서버 코드 없이 iCloud(CloudKit 프라이빗 데이터베이스)에 저장되고, 같은 iCloud 계정의 다른 기기와 자동으로 동기화됩니다. (`FileImportService`)
+4. **백업 / 복원** — 사이드바(노트북 목록) 오른쪽 위 `+` 메뉴에서 "백업 내보내기"를 누르면 모든 노트북·노트·필기·PDF·페이지별 주석을 하나의 JSON 파일(`MyNote-Backup-*.json`)로 만들어 공유 시트로 내보냅니다(파일 앱, iCloud Drive, AirDrop 등에 저장 가능). "백업에서 복원"으로 그 파일을 다시 선택하면 새 노트북들로 추가 복원됩니다 — 기존 데이터는 지우지 않는 안전한(추가형) 복원입니다. CloudKit 자동 동기화와는 별개로, 기기 이전이나 수동 스냅샷 용도로 씁니다. (`BackupService`)
 
 ## 프로젝트 구조
 
@@ -34,6 +35,7 @@ MyNote/
   Services/
     FileImportService.swift        PDF 가져오기 → Note 생성
     PDFAnnotationFlattener.swift   필기를 합친 PDF 내보내기용 렌더러
+    BackupService.swift            전체 데이터 JSON 백업 생성 / 복원
 ```
 
 ## 빌드 전 준비 (Xcode에서)

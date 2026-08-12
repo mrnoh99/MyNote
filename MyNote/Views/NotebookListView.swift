@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct NotebookListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -8,6 +9,12 @@ struct NotebookListView: View {
 
     @State private var isShowingNewNotebookAlert = false
     @State private var newNotebookTitle = ""
+
+    @State private var isShowingRestoreImporter = false
+    @State private var isShowingBackupShareSheet = false
+    @State private var backupShareURL: URL?
+    @State private var backupErrorMessage: String?
+    @State private var restoreResultMessage: String?
 
     var body: some View {
         List(selection: $selection) {
@@ -20,10 +27,26 @@ struct NotebookListView: View {
         .navigationTitle("MyNote")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    isShowingNewNotebookAlert = true
+                Menu {
+                    Button {
+                        isShowingNewNotebookAlert = true
+                    } label: {
+                        Label("새 노트북", systemImage: "plus")
+                    }
+                    Divider()
+                    Button {
+                        exportBackup()
+                    } label: {
+                        Label("백업 내보내기", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(notebooks.isEmpty)
+                    Button {
+                        isShowingRestoreImporter = true
+                    } label: {
+                        Label("백업에서 복원", systemImage: "square.and.arrow.down")
+                    }
                 } label: {
-                    Label("새 노트북", systemImage: "plus")
+                    Label("추가", systemImage: "plus")
                 }
             }
         }
@@ -35,6 +58,40 @@ struct NotebookListView: View {
             Button("만들기") {
                 createNotebook()
             }
+        }
+        .fileImporter(
+            isPresented: $isShowingRestoreImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleRestore(result: result)
+        }
+        .sheet(isPresented: $isShowingBackupShareSheet) {
+            if let backupShareURL {
+                ActivityView(activityItems: [backupShareURL])
+            }
+        }
+        .alert(
+            "백업/복원 실패",
+            isPresented: Binding(
+                get: { backupErrorMessage != nil },
+                set: { if !$0 { backupErrorMessage = nil } }
+            )
+        ) {
+            Button("확인") { backupErrorMessage = nil }
+        } message: {
+            Text(backupErrorMessage ?? "")
+        }
+        .alert(
+            "복원 완료",
+            isPresented: Binding(
+                get: { restoreResultMessage != nil },
+                set: { if !$0 { restoreResultMessage = nil } }
+            )
+        ) {
+            Button("확인") { restoreResultMessage = nil }
+        } message: {
+            Text(restoreResultMessage ?? "")
         }
         .overlay {
             if notebooks.isEmpty {
@@ -62,6 +119,26 @@ struct NotebookListView: View {
                 selection = nil
             }
             modelContext.delete(notebooks[index])
+        }
+    }
+
+    private func exportBackup() {
+        do {
+            backupShareURL = try BackupService.writeBackupFile(notebooks: notebooks)
+            isShowingBackupShareSheet = true
+        } catch {
+            backupErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func handleRestore(result: Result<[URL], Error>) {
+        do {
+            let urls = try result.get()
+            guard let url = urls.first else { return }
+            let count = try BackupService.restore(from: url, modelContext: modelContext)
+            restoreResultMessage = "노트북 \(count)개를 복원했습니다."
+        } catch {
+            backupErrorMessage = error.localizedDescription
         }
     }
 }
