@@ -11,6 +11,9 @@ OneNote와 비슷한 방식으로 쓰는 iOS 노트 앱입니다. SwiftUI + Swif
 5. **백업 / 복원** — 사이드바 오른쪽 위 `+` 메뉴에서 "백업 내보내기"를 누르면 폴더 구조를 포함한 라이브러리 전체(폴더·노트북·노트·필기·PDF·페이지별 주석)를 하나의 JSON 파일(`MyNote-Backup-*.json`)로 만들어 공유 시트로 내보냅니다(파일 앱, iCloud Drive, AirDrop 등에 저장 가능). "백업에서 복원"으로 그 파일을 다시 선택하면 새 폴더/노트북들로 추가 복원됩니다 — 기존 데이터는 지우지 않는 안전한(추가형) 복원입니다. CloudKit 자동 동기화와는 별개로, 기기 이전이나 수동 스냅샷 용도로 씁니다. (`BackupService`)
 6. **폴더 정리 / 이동 / 복제** — 노트북을 폴더로 묶어 정리할 수 있고(폴더 안에 폴더도 중첩 가능), 폴더·노트북·노트를 다른 폴더/노트북으로 옮기거나 복제할 수 있습니다. 사이드바에서 폴더를 길게 눌러(컨텍스트 메뉴) 이름 변경/이동/삭제, 노트북은 이름 변경/이동/복제/삭제를 할 수 있고, 노트북 안에서는 노트별로 다른 노트북으로 이동·복제할 수 있습니다. (`Models/Folder.swift`, `FolderBrowserView`, `FolderPickerView`, `NotebookPickerView`, `OrganizationService`)
 7. **앱 업데이트 시 데이터 보존** — SwiftData 스토어는 앱을 삭제하지 않는 한 기기에 남아있고(iOS가 업데이트 때 자동으로 보존), 스키마가 바뀌어도 손실 없이 마이그레이션되도록 `VersionedSchema` + `SchemaMigrationPlan`을 명시적으로 구성해뒀습니다. `ModelContainer` 생성이 실패해도 절대 기존 스토어 파일을 지우고 새로 만드는 "복구"를 하지 않습니다. 자세한 내용과 앞으로 모델을 바꿀 때 지켜야 할 절차는 `Models/MyNoteMigrationPlan.swift`의 주석을 참고하세요.
+8. **이미지 삽입 / 텍스트 상자** (필기 노트 전용) — 캔버스 위에 사진 라이브러리에서 고른 이미지나 키보드로 입력하는 텍스트 상자를 자유롭게 올려놓을 수 있습니다. 드래그로 옮기고, 오른쪽 아래 손잡이로 크기를 조절하고, 오른쪽 위 ×로 삭제합니다. 첨부물이 없는 빈 영역은 계속 애플펜슬 필기가 그대로 됩니다. (`AttachmentOverlayView`, `ImageAttachment`, `TextBoxAttachment`)
+9. **음성 메모** — 필기 노트와 PDF 노트 모두에서 툴바의 마이크 버튼으로 녹음 시트를 열어 음성 메모를 녹음·재생·삭제할 수 있습니다. (`AudioRecordingsSheet`, `AudioRecorderController`/`AudioPlaybackController`, `AudioRecording`)
+10. **여러 노트를 탭으로 열기** — 노트를 탭하면 브라우저 탭처럼 상단에 열린 노트 목록이 생기고, 탭을 눌러 전환하거나 ×로 닫을 수 있습니다. 탭 바의 + 버튼으로 같은 노트북의 다른 노트를 추가로 열 수 있습니다. 탭은 노트북 단위로 관리됩니다(다른 노트북으로 전환하면 초기화). (`NotebookDetailView`의 `openNotes`/`activeNote`)
 
 ## 프로젝트 구조
 
@@ -26,25 +29,31 @@ MyNote/
     Note.swift               노트 모델(필기 노트 / PDF 노트 공용)
     PDFPageAnnotation.swift  PDF 페이지별 필기 데이터
     MyNoteMigrationPlan.swift  VersionedSchema + SchemaMigrationPlan (데이터 손실 없는 업그레이드)
+    ImageAttachment.swift    캔버스 위 이미지 첨부(위치/크기 포함)
+    TextBoxAttachment.swift  캔버스 위 텍스트 상자 첨부(위치/크기 포함)
+    AudioRecording.swift     노트에 딸린 음성 메모
   Views/
     RootView.swift           NavigationSplitView 루트
     FolderBrowserView.swift  폴더/노트북 탐색(사이드바), 새 폴더/노트북, 백업/복원
     FolderPickerView.swift   폴더 "이동" 대상 선택 모달
     NotebookPickerView.swift 노트 "이동/복제" 대상 노트북 선택 모달
-    NotebookDetailView.swift 노트북 안의 노트 목록 + 새 노트/가져오기/이동/복제
+    NotebookDetailView.swift 노트북 안의 노트 목록 + 탭으로 열린 노트 전환/닫기 + 새 노트/가져오기/이동/복제
     NoteEditorView.swift     필기 노트 편집 화면
     PDFAnnotationView.swift  PDF 뷰어 + 애플펜슬 필기 화면
+    AudioRecordingsSheet.swift  음성 메모 녹음/재생/삭제 시트
     Components/
       CanvasRepresentable.swift   PencilKit 캔버스(UIViewRepresentable)
       ZoomablePDFPageView.swift   확대/축소·이동 가능한 PDF 페이지 + 애플펜슬 필기 레이어
       ActivityView.swift          공유 시트 래퍼
       NotePaperBackgroundView.swift  필기 노트 배경(빈 배경/줄노트/오선지) 렌더러
       PencilToolbarView.swift     커스텀 필기 도구 모음(펜/형광펜/지우개/올가미/굵기/색상/실행취소)
+      AttachmentOverlayView.swift 이미지/텍스트 상자 오버레이(드래그/리사이즈/삭제)
   Services/
     FileImportService.swift        PDF 가져오기 → Note 생성, 형식 안내
     PDFAnnotationFlattener.swift   필기를 합친 PDF 내보내기용 렌더러
     BackupService.swift            폴더 구조 포함 전체 JSON 백업 생성 / 복원
     OrganizationService.swift      노트북/노트 복제(딥카피) 헬퍼
+    AudioRecordingController.swift AVFoundation 녹음/재생 컨트롤러
 ```
 
 ## 빌드 전 준비 (Xcode에서)
@@ -61,5 +70,8 @@ MyNote/
 
 - OneNote(.one) 파일 자체를 직접 파싱하지는 않습니다. OneNote 앱의 "PDF로 내보내기" 기능으로 만든 PDF를 가져오는 방식입니다. Word/PPT/한글/Keynote/Pages도 마찬가지로 해당 앱에서 PDF로 내보내야 합니다.
 - 앱 아이콘은 `Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`(1024×1024, 알파 채널 없음)로 포함되어 있습니다. 마음에 들지 않으면 같은 경로의 PNG만 교체하면 됩니다.
-- 백업 파일 포맷은 버전 3(`formatVersion = 3`, 폴더 구조 + 노트 배경 스타일 포함)이며, 이전 버전의 백업 파일은 호환되지 않습니다.
+- 백업 파일 포맷은 버전 4(`formatVersion = 4`, 폴더 구조 + 노트 배경 스타일 + 이미지/텍스트 상자/음성 메모 포함)이며, 이전 버전의 백업 파일은 호환되지 않습니다.
+- 이미지/텍스트 상자 첨부는 필기 노트에만 있습니다. PDF 노트에 추가하려면 `ZoomablePDFPageView`의 확대/축소 컨테이너 안에 같은 오버레이를 얹는 별도 작업이 필요합니다(PDF 페이지가 확대될 때 첨부물도 같이 확대·이동되어야 하므로).
+- 탭(여러 노트 동시 열기)은 노트북 단위로 관리됩니다. 다른 노트북으로 이동하면 열려 있던 탭은 사라집니다(앱 전체에서 탭을 유지하려면 별도 작업이 필요합니다).
+- 음성 메모는 마이크 권한이 필요합니다(`NSMicrophoneUsageDescription`을 Info.plist에 포함했습니다). 시뮬레이터에서는 마이크 입력이 제한적일 수 있어 실기기 테스트를 권장합니다.
 - 이 프로젝트 파일은 macOS/Xcode가 없는 환경에서 작성되었으므로, 실제 Xcode에서 연 뒤 빌드 로그를 한 번 확인해 주세요.

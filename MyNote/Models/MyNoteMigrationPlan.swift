@@ -28,7 +28,10 @@ enum MyNoteSchemaV1: VersionedSchema {
     static let versionIdentifier = Schema.Version(1, 0, 0)
 
     static var models: [any PersistentModel.Type] {
-        [Folder.self, Notebook.self, Note.self, PDFPageAnnotation.self]
+        [
+            Folder.self, Notebook.self, Note.self, PDFPageAnnotation.self,
+            ImageAttachment.self, TextBoxAttachment.self, AudioRecording.self,
+        ]
     }
 }
 

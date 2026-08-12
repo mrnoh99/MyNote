@@ -40,6 +40,43 @@ enum OrganizationService {
             modelContext.insert(annotationCopy)
         }
 
+        for image in note.imageAttachments {
+            guard let imageData = image.imageData else { continue }
+            let imageCopy = ImageAttachment(
+                imageData: imageData,
+                positionX: image.positionX,
+                positionY: image.positionY,
+                width: image.width,
+                height: image.height
+            )
+            imageCopy.note = copy
+            modelContext.insert(imageCopy)
+        }
+
+        for textBox in note.textBoxAttachments {
+            let textBoxCopy = TextBoxAttachment(
+                text: textBox.text,
+                positionX: textBox.positionX,
+                positionY: textBox.positionY,
+                width: textBox.width,
+                height: textBox.height
+            )
+            textBoxCopy.fontSize = textBox.fontSize
+            textBoxCopy.colorHex = textBox.colorHex
+            textBoxCopy.note = copy
+            modelContext.insert(textBoxCopy)
+        }
+
+        for recording in note.audioRecordings {
+            let recordingCopy = AudioRecording(
+                title: recording.title,
+                duration: recording.duration,
+                audioData: recording.audioData
+            )
+            recordingCopy.note = copy
+            modelContext.insert(recordingCopy)
+        }
+
         return copy
     }
 }

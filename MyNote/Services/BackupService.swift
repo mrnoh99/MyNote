@@ -85,6 +85,9 @@ private struct NoteBackup: Codable {
     let drawingData: Data?
     let pdfData: Data?
     let pdfAnnotations: [PDFPageAnnotationBackup]
+    let imageAttachments: [ImageAttachmentBackup]
+    let textBoxAttachments: [TextBoxAttachmentBackup]
+    let audioRecordings: [AudioRecordingBackup]
 
     init(note: Note) {
         id = note.id
@@ -99,6 +102,15 @@ private struct NoteBackup: Codable {
         pdfAnnotations = note.pdfAnnotations
             .sorted { $0.pageIndex < $1.pageIndex }
             .map(PDFPageAnnotationBackup.init)
+        imageAttachments = note.imageAttachments
+            .sorted { $0.createdAt < $1.createdAt }
+            .map(ImageAttachmentBackup.init)
+        textBoxAttachments = note.textBoxAttachments
+            .sorted { $0.createdAt < $1.createdAt }
+            .map(TextBoxAttachmentBackup.init)
+        audioRecordings = note.audioRecordings
+            .sorted { $0.createdAt < $1.createdAt }
+            .map(AudioRecordingBackup.init)
     }
 }
 
@@ -114,8 +126,68 @@ private struct PDFPageAnnotationBackup: Codable {
     }
 }
 
+private struct ImageAttachmentBackup: Codable {
+    let id: UUID
+    let positionX: Double
+    let positionY: Double
+    let width: Double
+    let height: Double
+    let createdAt: Date
+    let imageData: Data?
+
+    init(attachment: ImageAttachment) {
+        id = attachment.id
+        positionX = attachment.positionX
+        positionY = attachment.positionY
+        width = attachment.width
+        height = attachment.height
+        createdAt = attachment.createdAt
+        imageData = attachment.imageData
+    }
+}
+
+private struct TextBoxAttachmentBackup: Codable {
+    let id: UUID
+    let text: String
+    let positionX: Double
+    let positionY: Double
+    let width: Double
+    let height: Double
+    let fontSize: Double
+    let colorHex: String
+    let createdAt: Date
+
+    init(attachment: TextBoxAttachment) {
+        id = attachment.id
+        text = attachment.text
+        positionX = attachment.positionX
+        positionY = attachment.positionY
+        width = attachment.width
+        height = attachment.height
+        fontSize = attachment.fontSize
+        colorHex = attachment.colorHex
+        createdAt = attachment.createdAt
+    }
+}
+
+private struct AudioRecordingBackup: Codable {
+    let id: UUID
+    let title: String
+    let duration: Double
+    let createdAt: Date
+    let audioData: Data?
+
+    init(recording: AudioRecording) {
+        id = recording.id
+        title = recording.title
+        duration = recording.duration
+        createdAt = recording.createdAt
+        audioData = recording.audioData
+    }
+}
+
 enum BackupService {
-    private static let formatVersion = 3
+    private static let formatVersion = 4
 
     private static var jsonEncoder: JSONEncoder {
         let encoder = JSONEncoder()
@@ -237,6 +309,43 @@ enum BackupService {
                     )
                     annotation.note = note
                     modelContext.insert(annotation)
+                }
+
+                for imageBackup in noteBackup.imageAttachments {
+                    guard let imageData = imageBackup.imageData else { continue }
+                    let attachment = ImageAttachment(
+                        imageData: imageData,
+                        positionX: imageBackup.positionX,
+                        positionY: imageBackup.positionY,
+                        width: imageBackup.width,
+                        height: imageBackup.height
+                    )
+                    attachment.note = note
+                    modelContext.insert(attachment)
+                }
+
+                for textBoxBackup in noteBackup.textBoxAttachments {
+                    let attachment = TextBoxAttachment(
+                        text: textBoxBackup.text,
+                        positionX: textBoxBackup.positionX,
+                        positionY: textBoxBackup.positionY,
+                        width: textBoxBackup.width,
+                        height: textBoxBackup.height
+                    )
+                    attachment.fontSize = textBoxBackup.fontSize
+                    attachment.colorHex = textBoxBackup.colorHex
+                    attachment.note = note
+                    modelContext.insert(attachment)
+                }
+
+                for recordingBackup in noteBackup.audioRecordings {
+                    let recording = AudioRecording(
+                        title: recordingBackup.title,
+                        duration: recordingBackup.duration,
+                        audioData: recordingBackup.audioData
+                    )
+                    recording.note = note
+                    modelContext.insert(recording)
                 }
             }
         }

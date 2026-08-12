@@ -1,11 +1,17 @@
 import SwiftUI
+import SwiftData
 import PencilKit
+import PhotosUI
 
 struct NoteEditorView: View {
     @Bindable var note: Note
+    @Environment(\.modelContext) private var modelContext
+
     @State private var canvasView = PKCanvasView()
     @StateObject private var toolState = PencilToolState()
     @State private var undoStateTick = 0
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isShowingAudioSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,6 +42,8 @@ struct NoteEditorView: View {
                     note.updatedAt = .now
                     undoStateTick += 1
                 }
+
+                AttachmentOverlayView(note: note)
             }
         }
         .navigationTitle(note.title)
@@ -65,6 +73,51 @@ struct NoteEditorView: View {
                     Label("배경", systemImage: "doc.plaintext")
                 }
             }
+            ToolbarItem(placement: .secondaryAction) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Label("이미지 추가", systemImage: "photo.badge.plus")
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    addTextBox()
+                } label: {
+                    Label("텍스트 상자 추가", systemImage: "textbox")
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    isShowingAudioSheet = true
+                } label: {
+                    Label("음성 메모", systemImage: "mic")
+                }
+            }
         }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    addImageAttachment(data: data)
+                }
+                selectedPhotoItem = nil
+            }
+        }
+        .sheet(isPresented: $isShowingAudioSheet) {
+            AudioRecordingsSheet(note: note)
+        }
+    }
+
+    private func addImageAttachment(data: Data) {
+        let attachment = ImageAttachment(imageData: data)
+        attachment.note = note
+        modelContext.insert(attachment)
+        note.updatedAt = .now
+    }
+
+    private func addTextBox() {
+        let attachment = TextBoxAttachment(text: "")
+        attachment.note = note
+        modelContext.insert(attachment)
+        note.updatedAt = .now
     }
 }

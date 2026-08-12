@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PDFKit
 import PencilKit
 
@@ -17,6 +18,7 @@ struct PDFAnnotationView: View {
     @State private var shareURL: URL?
     @State private var loadErrorMessage: String?
     @State private var exportErrorMessage: String?
+    @State private var isShowingAudioSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -79,11 +81,21 @@ struct PDFAnnotationView: View {
                 }
                 .disabled(pdfDocument == nil)
             }
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    isShowingAudioSheet = true
+                } label: {
+                    Label("음성 메모", systemImage: "mic")
+                }
+            }
         }
         .sheet(isPresented: $isShowingShareSheet) {
             if let shareURL {
                 ActivityView(activityItems: [shareURL])
             }
+        }
+        .sheet(isPresented: $isShowingAudioSheet) {
+            AudioRecordingsSheet(note: note)
         }
         .alert(
             "내보내기 실패",

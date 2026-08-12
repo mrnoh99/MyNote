@@ -56,6 +56,15 @@ final class Note {
     @Relationship(deleteRule: .cascade, inverse: \PDFPageAnnotation.note)
     var pdfAnnotations: [PDFPageAnnotation] = []
 
+    @Relationship(deleteRule: .cascade, inverse: \ImageAttachment.note)
+    var imageAttachments: [ImageAttachment] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \TextBoxAttachment.note)
+    var textBoxAttachments: [TextBoxAttachment] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \AudioRecording.note)
+    var audioRecordings: [AudioRecording] = []
+
     var notebook: Notebook?
 
     init(title: String, kind: NoteKind, notebook: Notebook? = nil) {

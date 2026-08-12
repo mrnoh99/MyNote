@@ -26,5 +26,11 @@ struct RootView: View {
 
 #Preview {
     RootView()
-        .modelContainer(for: [Folder.self, Notebook.self, Note.self, PDFPageAnnotation.self], inMemory: true)
+        .modelContainer(
+            for: [
+                Folder.self, Notebook.self, Note.self, PDFPageAnnotation.self,
+                ImageAttachment.self, TextBoxAttachment.self, AudioRecording.self,
+            ],
+            inMemory: true
+        )
 }
