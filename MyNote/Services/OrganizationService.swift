@@ -47,7 +47,8 @@ enum OrganizationService {
                 positionX: image.positionX,
                 positionY: image.positionY,
                 width: image.width,
-                height: image.height
+                height: image.height,
+                pageIndex: image.pageIndex
             )
             imageCopy.note = copy
             modelContext.insert(imageCopy)
@@ -59,7 +60,8 @@ enum OrganizationService {
                 positionX: textBox.positionX,
                 positionY: textBox.positionY,
                 width: textBox.width,
-                height: textBox.height
+                height: textBox.height,
+                pageIndex: textBox.pageIndex
             )
             textBoxCopy.fontSize = textBox.fontSize
             textBoxCopy.colorHex = textBox.colorHex

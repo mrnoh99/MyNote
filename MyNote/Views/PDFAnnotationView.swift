@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import PDFKit
 import PencilKit
+import PhotosUI
 
 struct PDFAnnotationView: View {
     @Bindable var note: Note
@@ -19,6 +20,19 @@ struct PDFAnnotationView: View {
     @State private var loadErrorMessage: String?
     @State private var exportErrorMessage: String?
     @State private var isShowingAudioSheet = false
+    @State private var isEditingAttachments = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+
+    /// 현재 페이지에 속한 첨부만 걸러서 읽는다. 이 계산 프로퍼티를 body에서
+    /// 직접 참조해야 SwiftUI Observation이 `note.imageAttachments`의
+    /// 변화를 추적해서 화면을 다시 그린다.
+    private var currentPageImageAttachments: [ImageAttachment] {
+        note.imageAttachments.filter { $0.pageIndex == currentPageIndex }
+    }
+
+    private var currentPageTextBoxAttachments: [TextBoxAttachment] {
+        note.textBoxAttachments.filter { $0.pageIndex == currentPageIndex }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,11 +55,15 @@ struct PDFAnnotationView: View {
                     ZoomablePDFPageView(
                         document: pdfDocument,
                         pageIndex: currentPageIndex,
+                        imageAttachments: currentPageImageAttachments,
+                        textBoxAttachments: currentPageTextBoxAttachments,
                         canvasView: $canvasView,
                         drawingData: annotationData(for: currentPageIndex),
                         controller: zoomController,
                         toolState: toolState,
-                        viewportSize: geometry.size
+                        viewportSize: geometry.size,
+                        isEditingAttachments: isEditingAttachments,
+                        modelContext: modelContext
                     ) { drawing in
                         saveAnnotation(drawing, forPage: currentPageIndex)
                         undoStateTick += 1
@@ -71,6 +89,31 @@ struct PDFAnnotationView: View {
                 } label: {
                     Label("화면에 맞추기", systemImage: "arrow.up.left.and.arrow.down.right")
                 }
+                .disabled(pdfDocument == nil || isEditingAttachments)
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    isEditingAttachments.toggle()
+                } label: {
+                    Label(
+                        isEditingAttachments ? "첨부물 편집 완료" : "첨부물 편집",
+                        systemImage: isEditingAttachments ? "checkmark.circle.fill" : "photo.on.rectangle.angled"
+                    )
+                }
+                .disabled(pdfDocument == nil)
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Label("이미지 추가", systemImage: "photo.badge.plus")
+                }
+                .disabled(pdfDocument == nil)
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    addTextBox()
+                } label: {
+                    Label("텍스트 상자 추가", systemImage: "textbox")
+                }
                 .disabled(pdfDocument == nil)
             }
             ToolbarItem(placement: .secondaryAction) {
@@ -87,6 +130,15 @@ struct PDFAnnotationView: View {
                 } label: {
                     Label("음성 메모", systemImage: "mic")
                 }
+            }
+        }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    addImageAttachment(data: data)
+                }
+                selectedPhotoItem = nil
             }
         }
         .sheet(isPresented: $isShowingShareSheet) {
@@ -120,7 +172,7 @@ struct PDFAnnotationView: View {
             } label: {
                 Image(systemName: "chevron.left")
             }
-            .disabled(currentPageIndex == 0)
+            .disabled(currentPageIndex == 0 || isEditingAttachments)
 
             Spacer()
 
@@ -135,7 +187,7 @@ struct PDFAnnotationView: View {
             } label: {
                 Image(systemName: "chevron.right")
             }
-            .disabled(currentPageIndex >= pageCount - 1)
+            .disabled(currentPageIndex >= pageCount - 1 || isEditingAttachments)
         }
         .padding()
         .background(.bar)
@@ -172,6 +224,22 @@ struct PDFAnnotationView: View {
     private func goToPage(_ index: Int) {
         guard index >= 0, index < pageCount else { return }
         currentPageIndex = index
+    }
+
+    private func addImageAttachment(data: Data) {
+        let attachment = ImageAttachment(imageData: data, pageIndex: currentPageIndex)
+        attachment.note = note
+        modelContext.insert(attachment)
+        note.updatedAt = .now
+        isEditingAttachments = true
+    }
+
+    private func addTextBox() {
+        let attachment = TextBoxAttachment(text: "", pageIndex: currentPageIndex)
+        attachment.note = note
+        modelContext.insert(attachment)
+        note.updatedAt = .now
+        isEditingAttachments = true
     }
 
     private func exportAndShare() {

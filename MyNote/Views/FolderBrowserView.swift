@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 struct FolderBrowserView: View {
     let folder: Folder?
     @Binding var selectedNotebook: Notebook?
+    @ObservedObject var workspace: NoteWorkspace
 
     @Environment(\.modelContext) private var modelContext
 
@@ -31,9 +32,10 @@ struct FolderBrowserView: View {
     @State private var backupErrorMessage: String?
     @State private var restoreResultMessage: String?
 
-    init(folder: Folder?, selectedNotebook: Binding<Notebook?>) {
+    init(folder: Folder?, selectedNotebook: Binding<Notebook?>, workspace: NoteWorkspace) {
         self.folder = folder
         self._selectedNotebook = selectedNotebook
+        self.workspace = workspace
 
         let folderID = folder?.id
         _subfolders = Query(
@@ -128,7 +130,7 @@ struct FolderBrowserView: View {
         }
         .navigationTitle(folder?.title ?? "MyNote")
         .navigationDestination(for: Folder.self) { subfolder in
-            FolderBrowserView(folder: subfolder, selectedNotebook: $selectedNotebook)
+            FolderBrowserView(folder: subfolder, selectedNotebook: $selectedNotebook, workspace: workspace)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -279,6 +281,7 @@ struct FolderBrowserView: View {
     }
 
     private func delete(folder: Folder) {
+        closeTabs(inFolderTree: folder)
         modelContext.delete(folder)
     }
 
@@ -286,7 +289,25 @@ struct FolderBrowserView: View {
         if selectedNotebook == notebook {
             selectedNotebook = nil
         }
+        closeTabs(in: notebook)
         modelContext.delete(notebook)
+    }
+
+    /// 삭제로 인해 사라질 노트가 탭으로 열려 있으면 먼저 닫는다.
+    /// (삭제된 SwiftData 객체를 탭이 계속 들고 있으면 안 된다.)
+    private func closeTabs(in notebook: Notebook) {
+        for note in notebook.notes {
+            workspace.close(note)
+        }
+    }
+
+    private func closeTabs(inFolderTree folder: Folder) {
+        for notebook in folder.notebooks {
+            closeTabs(in: notebook)
+        }
+        for subfolder in folder.subfolders {
+            closeTabs(inFolderTree: subfolder)
+        }
     }
 
     private func duplicate(notebook: Notebook) {

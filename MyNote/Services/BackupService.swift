@@ -132,6 +132,7 @@ private struct ImageAttachmentBackup: Codable {
     let positionY: Double
     let width: Double
     let height: Double
+    let pageIndex: Int?
     let createdAt: Date
     let imageData: Data?
 
@@ -141,6 +142,7 @@ private struct ImageAttachmentBackup: Codable {
         positionY = attachment.positionY
         width = attachment.width
         height = attachment.height
+        pageIndex = attachment.pageIndex
         createdAt = attachment.createdAt
         imageData = attachment.imageData
     }
@@ -155,6 +157,7 @@ private struct TextBoxAttachmentBackup: Codable {
     let height: Double
     let fontSize: Double
     let colorHex: String
+    let pageIndex: Int?
     let createdAt: Date
 
     init(attachment: TextBoxAttachment) {
@@ -166,6 +169,7 @@ private struct TextBoxAttachmentBackup: Codable {
         height = attachment.height
         fontSize = attachment.fontSize
         colorHex = attachment.colorHex
+        pageIndex = attachment.pageIndex
         createdAt = attachment.createdAt
     }
 }
@@ -318,7 +322,8 @@ enum BackupService {
                         positionX: imageBackup.positionX,
                         positionY: imageBackup.positionY,
                         width: imageBackup.width,
-                        height: imageBackup.height
+                        height: imageBackup.height,
+                        pageIndex: imageBackup.pageIndex
                     )
                     attachment.note = note
                     modelContext.insert(attachment)
@@ -330,7 +335,8 @@ enum BackupService {
                         positionX: textBoxBackup.positionX,
                         positionY: textBoxBackup.positionY,
                         width: textBoxBackup.width,
-                        height: textBoxBackup.height
+                        height: textBoxBackup.height,
+                        pageIndex: textBoxBackup.pageIndex
                     )
                     attachment.fontSize = textBoxBackup.fontSize
                     attachment.colorHex = textBoxBackup.colorHex
