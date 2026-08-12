@@ -6,6 +6,29 @@ enum NoteKind: String, Codable {
     case pdf
 }
 
+/// 필기 노트(PDF 노트에는 적용되지 않음)의 캔버스 배경 종이 스타일.
+enum NoteBackgroundStyle: String, Codable, CaseIterable, Hashable {
+    case blank
+    case lined
+    case staffPaper
+
+    var displayName: String {
+        switch self {
+        case .blank: return "빈 배경"
+        case .lined: return "줄노트"
+        case .staffPaper: return "오선지"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .blank: return "square"
+        case .lined: return "text.alignleft"
+        case .staffPaper: return "music.note.list"
+        }
+    }
+}
+
 @Model
 final class Note {
     var id: UUID = UUID()
@@ -14,6 +37,7 @@ final class Note {
     var createdAt: Date = Date.now
     var updatedAt: Date = Date.now
     var sourceFileName: String?
+    var backgroundStyle: NoteBackgroundStyle = NoteBackgroundStyle.blank
 
     @Attribute(.externalStorage)
     var drawingData: Data?

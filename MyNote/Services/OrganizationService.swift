@@ -28,6 +28,7 @@ enum OrganizationService {
     ) -> Note {
         let title = renaming ? note.title + " 복사본" : note.title
         let copy = Note(title: title, kind: note.kind, notebook: notebook)
+        copy.backgroundStyle = note.backgroundStyle
         copy.sourceFileName = note.sourceFileName
         copy.drawingData = note.drawingData
         copy.pdfData = note.pdfData

@@ -9,7 +9,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         canvasView.drawingPolicy = .anyInput
-        canvasView.backgroundColor = .systemBackground
+        canvasView.backgroundColor = .clear
+        canvasView.isOpaque = false
         canvasView.delegate = context.coordinator
 
         if let initialDrawingData, let drawing = try? PKDrawing(data: initialDrawingData) {

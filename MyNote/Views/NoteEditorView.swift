@@ -6,12 +6,17 @@ struct NoteEditorView: View {
     @State private var canvasView = PKCanvasView()
 
     var body: some View {
-        CanvasRepresentable(
-            canvasView: $canvasView,
-            initialDrawingData: note.drawingData
-        ) { drawing in
-            note.drawingData = drawing.dataRepresentation()
-            note.updatedAt = .now
+        ZStack {
+            NotePaperBackgroundView(style: note.backgroundStyle)
+                .ignoresSafeArea()
+
+            CanvasRepresentable(
+                canvasView: $canvasView,
+                initialDrawingData: note.drawingData
+            ) { drawing in
+                note.drawingData = drawing.dataRepresentation()
+                note.updatedAt = .now
+            }
         }
         .navigationTitle(note.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -22,6 +27,23 @@ struct NoteEditorView: View {
                     .onSubmit {
                         note.updatedAt = .now
                     }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Menu {
+                    ForEach(NoteBackgroundStyle.allCases, id: \.self) { style in
+                        Button {
+                            note.backgroundStyle = style
+                            note.updatedAt = .now
+                        } label: {
+                            Label(style.displayName, systemImage: style.systemImage)
+                            if note.backgroundStyle == style {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } label: {
+                    Label("배경", systemImage: "doc.plaintext")
+                }
             }
         }
     }

@@ -78,6 +78,7 @@ private struct NoteBackup: Codable {
     let id: UUID
     let title: String
     let kind: NoteKind
+    let backgroundStyle: NoteBackgroundStyle
     let createdAt: Date
     let updatedAt: Date
     let sourceFileName: String?
@@ -89,6 +90,7 @@ private struct NoteBackup: Codable {
         id = note.id
         title = note.title
         kind = note.kind
+        backgroundStyle = note.backgroundStyle
         createdAt = note.createdAt
         updatedAt = note.updatedAt
         sourceFileName = note.sourceFileName
@@ -113,7 +115,7 @@ private struct PDFPageAnnotationBackup: Codable {
 }
 
 enum BackupService {
-    private static let formatVersion = 2
+    private static let formatVersion = 3
 
     private static var jsonEncoder: JSONEncoder {
         let encoder = JSONEncoder()
@@ -220,6 +222,7 @@ enum BackupService {
 
             for noteBackup in notebookBackup.notes {
                 let note = Note(title: noteBackup.title, kind: noteBackup.kind, notebook: notebook)
+                note.backgroundStyle = noteBackup.backgroundStyle
                 note.createdAt = noteBackup.createdAt
                 note.updatedAt = noteBackup.updatedAt
                 note.sourceFileName = noteBackup.sourceFileName
