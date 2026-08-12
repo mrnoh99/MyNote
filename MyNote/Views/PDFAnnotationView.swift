@@ -11,6 +11,8 @@ struct PDFAnnotationView: View {
     @State private var pageCount = 0
     @State private var canvasView = PKCanvasView()
     @State private var zoomController = PDFZoomController()
+    @StateObject private var toolState = PencilToolState()
+    @State private var undoStateTick = 0
     @State private var isShowingShareSheet = false
     @State private var shareURL: URL?
     @State private var loadErrorMessage: String?
@@ -18,6 +20,20 @@ struct PDFAnnotationView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            PencilToolbarView(
+                toolState: toolState,
+                canUndo: canvasView.undoManager?.canUndo ?? false,
+                canRedo: canvasView.undoManager?.canRedo ?? false,
+                onUndo: {
+                    canvasView.undoManager?.undo()
+                    undoStateTick += 1
+                },
+                onRedo: {
+                    canvasView.undoManager?.redo()
+                    undoStateTick += 1
+                }
+            )
+
             if let pdfDocument {
                 GeometryReader { geometry in
                     ZoomablePDFPageView(
@@ -26,9 +42,11 @@ struct PDFAnnotationView: View {
                         canvasView: $canvasView,
                         drawingData: annotationData(for: currentPageIndex),
                         controller: zoomController,
+                        toolState: toolState,
                         viewportSize: geometry.size
                     ) { drawing in
                         saveAnnotation(drawing, forPage: currentPageIndex)
+                        undoStateTick += 1
                     }
                 }
                 pageNavigationBar

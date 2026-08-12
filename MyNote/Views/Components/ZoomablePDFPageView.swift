@@ -18,13 +18,15 @@ final class PDFZoomController {
 /// 애플펜슬은 필기를 담당하도록 입력을 나눴다. 페이지 이미지와 필기
 /// 레이어를 같은 컨테이너 뷰 안에 넣고 바깥쪽 UIScrollView 하나로만
 /// 확대/축소하기 때문에, 확대해도 필기와 PDF가 항상 같은 자리에 맞춰
-/// 보인다.
+/// 보인다. 현재 필기 도구는 iOS 기본 도구 모음이 아니라
+/// `PencilToolbarView`가 제어하는 `PencilToolState`를 그대로 반영한다.
 struct ZoomablePDFPageView: UIViewRepresentable {
     let document: PDFDocument
     let pageIndex: Int
     @Binding var canvasView: PKCanvasView
     var drawingData: Data?
     var controller: PDFZoomController
+    var toolState: PencilToolState
     var viewportSize: CGSize
     var onDrawingChanged: (PKDrawing) -> Void
 
@@ -49,18 +51,13 @@ struct ZoomablePDFPageView: UIViewRepresentable {
         canvasView.isOpaque = false
         canvasView.isScrollEnabled = false
         canvasView.delegate = context.coordinator
+        canvasView.tool = toolState.pkTool
         containerView.addSubview(canvasView)
 
         context.coordinator.scrollView = scrollView
         context.coordinator.containerView = containerView
         context.coordinator.imageView = imageView
         context.coordinator.canvasView = canvasView
-
-        let toolPicker = PKToolPicker()
-        toolPicker.setVisible(true, forFirstResponder: canvasView)
-        toolPicker.addObserver(canvasView)
-        canvasView.becomeFirstResponder()
-        context.coordinator.toolPicker = toolPicker
 
         controller.resetToFitAction = { [weak coordinator = context.coordinator] in
             coordinator?.fitToScreen(animated: true)
@@ -74,6 +71,7 @@ struct ZoomablePDFPageView: UIViewRepresentable {
 
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
         context.coordinator.onDrawingChanged = onDrawingChanged
+        canvasView.tool = toolState.pkTool
 
         let pageChanged = context.coordinator.loadedPageIndex != pageIndex
         let viewportChanged = context.coordinator.lastViewportSize != viewportSize
@@ -95,7 +93,6 @@ struct ZoomablePDFPageView: UIViewRepresentable {
         weak var containerView: UIView?
         weak var imageView: UIImageView?
         weak var canvasView: PKCanvasView?
-        var toolPicker: PKToolPicker?
 
         var loadedPageIndex: Int = -1
         var lastViewportSize: CGSize = .zero

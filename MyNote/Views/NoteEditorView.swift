@@ -4,18 +4,38 @@ import PencilKit
 struct NoteEditorView: View {
     @Bindable var note: Note
     @State private var canvasView = PKCanvasView()
+    @StateObject private var toolState = PencilToolState()
+    @State private var undoStateTick = 0
 
     var body: some View {
-        ZStack {
-            NotePaperBackgroundView(style: note.backgroundStyle)
-                .ignoresSafeArea()
+        VStack(spacing: 0) {
+            PencilToolbarView(
+                toolState: toolState,
+                canUndo: canvasView.undoManager?.canUndo ?? false,
+                canRedo: canvasView.undoManager?.canRedo ?? false,
+                onUndo: {
+                    canvasView.undoManager?.undo()
+                    undoStateTick += 1
+                },
+                onRedo: {
+                    canvasView.undoManager?.redo()
+                    undoStateTick += 1
+                }
+            )
 
-            CanvasRepresentable(
-                canvasView: $canvasView,
-                initialDrawingData: note.drawingData
-            ) { drawing in
-                note.drawingData = drawing.dataRepresentation()
-                note.updatedAt = .now
+            ZStack {
+                NotePaperBackgroundView(style: note.backgroundStyle)
+                    .ignoresSafeArea()
+
+                CanvasRepresentable(
+                    canvasView: $canvasView,
+                    initialDrawingData: note.drawingData,
+                    toolState: toolState
+                ) { drawing in
+                    note.drawingData = drawing.dataRepresentation()
+                    note.updatedAt = .now
+                    undoStateTick += 1
+                }
             }
         }
         .navigationTitle(note.title)
