@@ -6,7 +6,9 @@ struct RootView: View {
 
     var body: some View {
         NavigationSplitView {
-            NotebookListView(selection: $selectedNotebook)
+            NavigationStack {
+                FolderBrowserView(folder: nil, selectedNotebook: $selectedNotebook)
+            }
         } detail: {
             if let selectedNotebook {
                 NotebookDetailView(notebook: selectedNotebook)
@@ -24,5 +26,5 @@ struct RootView: View {
 
 #Preview {
     RootView()
-        .modelContainer(for: [Notebook.self, Note.self, PDFPageAnnotation.self], inMemory: true)
+        .modelContainer(for: [Folder.self, Notebook.self, Note.self, PDFPageAnnotation.self], inMemory: true)
 }

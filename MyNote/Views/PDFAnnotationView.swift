@@ -124,7 +124,6 @@ struct PDFAnnotationView: View {
             let annotation = PDFPageAnnotation(pageIndex: pageIndex, drawingData: drawing.dataRepresentation())
             annotation.note = note
             modelContext.insert(annotation)
-            note.pdfAnnotations.append(annotation)
         }
         note.updatedAt = .now
     }

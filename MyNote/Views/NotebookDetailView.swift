@@ -11,6 +11,9 @@ struct NotebookDetailView: View {
     @State private var importErrorMessage: String?
     @State private var isShowingFormatGuidance = false
 
+    @State private var movingNote: Note?
+    @State private var duplicatingNote: Note?
+
     private var sortedNotes: [Note] {
         notebook.notes.sorted { $0.updatedAt > $1.updatedAt }
     }
@@ -21,6 +24,28 @@ struct NotebookDetailView: View {
                 ForEach(sortedNotes) { note in
                     NavigationLink(value: note) {
                         NoteRow(note: note)
+                    }
+                    .contextMenu {
+                        Button {
+                            movingNote = note
+                        } label: {
+                            Label("다른 노트북으로 이동", systemImage: "folder.badge.gearshape")
+                        }
+                        Button {
+                            duplicatingNote = note
+                        } label: {
+                            Label("다른 노트북으로 복제", systemImage: "plus.square.on.square")
+                        }
+                        Button {
+                            OrganizationService.duplicateNote(note, into: notebook, modelContext: modelContext)
+                        } label: {
+                            Label("이 노트북에 복제", systemImage: "doc.on.doc")
+                        }
+                        Button(role: .destructive) {
+                            modelContext.delete(note)
+                        } label: {
+                            Label("삭제", systemImage: "trash")
+                        }
                     }
                 }
                 .onDelete(perform: deleteNotes)
@@ -79,6 +104,17 @@ struct NotebookDetailView: View {
             } message: {
                 Text("PDF 파일만 가져올 수 있어요.\n\(FileImportService.unsupportedFormatGuidance)")
             }
+            .sheet(item: $movingNote) { note in
+                NotebookPickerView(itemTitle: note.title, excluding: notebook) { destination in
+                    note.notebook = destination
+                    note.updatedAt = .now
+                }
+            }
+            .sheet(item: $duplicatingNote) { note in
+                NotebookPickerView(itemTitle: note.title, excluding: nil) { destination in
+                    OrganizationService.duplicateNote(note, into: destination, modelContext: modelContext)
+                }
+            }
             .overlay {
                 if notebook.notes.isEmpty {
                     ContentUnavailableView(
@@ -94,7 +130,6 @@ struct NotebookDetailView: View {
     private func createWrittenNote() {
         let note = Note(title: "새 노트", kind: .written, notebook: notebook)
         modelContext.insert(note)
-        notebook.notes.append(note)
         notebook.updatedAt = .now
         navigationPath.append(note)
     }

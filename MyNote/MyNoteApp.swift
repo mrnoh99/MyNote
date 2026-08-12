@@ -6,7 +6,7 @@ struct MyNoteApp: App {
     let modelContainer: ModelContainer
 
     init() {
-        let schema = Schema([Notebook.self, Note.self, PDFPageAnnotation.self])
+        let schema = Schema([Folder.self, Notebook.self, Note.self, PDFPageAnnotation.self])
         let configuration = ModelConfiguration(
             schema: schema,
             cloudKitDatabase: .automatic

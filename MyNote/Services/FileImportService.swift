@@ -47,7 +47,6 @@ enum FileImportService {
         note.sourceFileName = url.lastPathComponent
 
         modelContext.insert(note)
-        notebook.notes.append(note)
         notebook.updatedAt = .now
 
         return note
